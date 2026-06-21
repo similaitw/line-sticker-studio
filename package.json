@@ -6,7 +6,7 @@
   "license": "MIT",
   "keywords": ["line-sticker", "chatgpt", "gemini", "react", "typescript", "vite", "apng"],
   "engines": {
-    "node": ">=20.19.0"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vite",
