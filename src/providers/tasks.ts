@@ -1,12 +1,14 @@
 import { getSpec } from '../domain/specs';
 import { stylePrompt } from '../domain/styles';
-import type { GenerationProvider, GenerationTask, ReferencePhoto, StickerProject, TaskKind } from '../domain/types';
+import { buildSubjectDescription } from '../domain/subjectDescription';
+import type { GenerationProvider, GenerationTask, ReferencePhoto, StickerProject, SubjectProfile, TaskKind } from '../domain/types';
 
 export interface TaskManifest {
-  schema: 'line-sticker-task/v1' | 'line-sticker-task/v2'; taskId: string; provider: GenerationProvider; kind: TaskKind;
+  schema: 'line-sticker-task/v1' | 'line-sticker-task/v2' | 'line-sticker-task/v3'; taskId: string; provider: GenerationProvider; kind: TaskKind;
   stickerType: StickerProject['type']; count: number; targetCount?: number; columns: number; rows: number; cellCount?: number;
   character: string; style: string; captions: { index: number; text: string; intent: string; visible: boolean }[];
   referencePhotos?: Pick<ReferencePhoto, 'id' | 'name' | 'type' | 'width' | 'height' | 'hash' | 'primary'>[];
+  subjectProfile?: SubjectProfile; characterDescription?: string; catalogVersion?: string;
   deliverables?: { kind: 'sticker-sheet' | 'animation-frames' | 'popup-frames' | 'effect-frames'; description: string }[];
   output: { format: 'PNG'; transparent: true; width: number; height: number; frames?: { min: number; max: number; maxDurationMs: number } };
 }
@@ -22,12 +24,13 @@ export function createGenerationTask(project: StickerProject, kind: TaskKind = '
 
 export function buildTaskManifest(project: StickerProject, task: GenerationTask): TaskManifest {
   const spec = getSpec(project.type); const cellCount = project.settings.rows * project.settings.columns;
+  const characterDescription=buildSubjectDescription(project.subjectProfile,project.referencePhotos);
   const animationKind = project.type === 'animated' ? 'animation-frames' : project.type === 'popup' ? 'popup-frames' : project.type === 'effect' ? 'effect-frames' : null;
   const deliverables: NonNullable<TaskManifest['deliverables']> = [{ kind: 'sticker-sheet', description: `Create ${cellCount} candidate illustrations in an exact ${project.settings.columns} column × ${project.settings.rows} row grid.` }];
   if (animationKind) deliverables.push({ kind: animationKind, description: `After the sticker sheet is approved, create coherent frame sheets for each selected sticker in this same conversation (${spec.minFrames}–${spec.maxFrames} frames, maximum ${spec.maxDurationMs} ms).` });
-  return { schema: 'line-sticker-task/v2', taskId: task.id, provider: task.provider, kind: 'project-generation', stickerType: project.type,
+  return { schema: 'line-sticker-task/v3', taskId: task.id, provider: task.provider, kind: 'project-generation', stickerType: project.type,
     count: cellCount, targetCount: project.settings.count, columns: project.settings.columns, rows: project.settings.rows, cellCount,
-    character: project.settings.character, style: stylePrompt(project.styleRecipe),
+    character: characterDescription, characterDescription, subjectProfile: project.subjectProfile, catalogVersion: project.subjectProfile.catalogVersion, style: stylePrompt(project.styleRecipe),
     captions: project.captionSlots.slice(0, cellCount).map((item, index) => ({ index: index + 1, text: item.text, intent: item.intent, visible: item.visible })),
     referencePhotos: project.referencePhotos.map(({ id, name, type, width, height, hash, primary }) => ({ id, name, type, width, height, hash, primary })),
     deliverables, output: { format: 'PNG', transparent: true, width: 1024, height: 1024,
@@ -46,7 +49,7 @@ export function parseTaskMarkdown(markdown: string): TaskManifest {
   const match = markdown.match(/<!-- LINE_STICKER_TASK_MANIFEST\n([\s\S]*?)\nEND_LINE_STICKER_TASK_MANIFEST -->/);
   if (!match) throw new Error('找不到 LINE Sticker 任務 manifest');
   const value = JSON.parse(match[1]) as TaskManifest;
-  if (!['line-sticker-task/v1', 'line-sticker-task/v2'].includes(value.schema) || !value.taskId) throw new Error('不支援的任務格式');
+  if (!['line-sticker-task/v1', 'line-sticker-task/v2', 'line-sticker-task/v3'].includes(value.schema) || !value.taskId) throw new Error('不支援的任務格式');
   return value;
 }
 
