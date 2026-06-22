@@ -37,6 +37,7 @@ export async function resizeDataUrl(dataUrl: string, width: number, height: numb
 }
 
 export function createAsset(name: string, dataUrl: string, width: number, height: number, hasTransparency = true,
-  provenanceMark: ProvenanceMark = 'unknown', sourceProvider?: GenerationProvider, visualHash?: string): StickerAsset {
-  return { id: crypto.randomUUID(), name, dataUrl, width, height, bytes: dataUrlBytes(dataUrl), hasTransparency, provenanceMark, sourceProvider, visualHash };
+  provenanceMark: ProvenanceMark = 'unknown', sourceProvider?: GenerationProvider, visualHash?: string,
+  gridIndex = 0, included = true, selectedAt?: number): StickerAsset {
+  return { id: crypto.randomUUID(), name, dataUrl, width, height, bytes: dataUrlBytes(dataUrl), hasTransparency, provenanceMark, sourceProvider, visualHash, gridIndex, included, selectedAt };
 }

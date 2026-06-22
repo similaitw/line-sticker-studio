@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, type Dispatch, type ReactNode } from 'react';
-import { changeProjectType, createProject, parseProject, serializeProject } from '../domain/project';
+import { changeProjectType, createProject } from '../domain/project';
+import { createProjectBackup, readProjectBackup } from '../storage/projectBackup';
 import type { AnimationFrame, StickerAsset, StickerProject, StickerType } from '../domain/types';
 
 interface HistoryState { past: StickerProject[]; present: StickerProject; future: StickerProject[] }
@@ -33,7 +34,7 @@ interface ProjectContextValue {
   setType: (type: StickerType) => void;
   setStickers: (stickers: StickerAsset[]) => void;
   setAnimationFrames: (stickerId: string, frames: AnimationFrame[]) => void;
-  saveProject: () => void;
+  saveProject: () => Promise<void>;
   loadProject: (file: File) => Promise<void>;
 }
 
@@ -56,15 +57,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const setAnimationFrames = useCallback((stickerId: string, frames: AnimationFrame[]) => dispatch({ type: 'update', patch: (current) => ({
     ...current, animationSets: { ...current.animationSets, [stickerId]: frames },
   }) }), []);
-  const saveProject = useCallback(() => {
-    const blob = new Blob([serializeProject(project)], { type: 'application/json' });
+  const saveProject = useCallback(async () => {
+    const blob = await createProjectBackup(project);
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url; link.download = `${project.name}.line-sticker.json`; link.click();
+    link.href = url; link.download = `${project.name}.line-sticker.zip`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }, [project]);
   const loadProject = useCallback(async (file: File) => {
-    dispatch({ type: 'replace', project: parseProject(await file.text()) });
+    dispatch({ type: 'replace', project: await readProjectBackup(file) });
   }, []);
 
   const value = useMemo(() => ({

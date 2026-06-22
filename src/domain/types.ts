@@ -1,7 +1,7 @@
 export type StickerType = 'static' | 'animated' | 'custom' | 'message' | 'big' | 'popup' | 'effect';
 export type StickerCount = 8 | 16 | 24 | 32 | 40;
 export type GenerationProvider = 'chatgpt' | 'gemini';
-export type TaskKind = 'character-reference' | 'sticker-sheet' | 'animation-frames' | 'popup-frames' | 'effect-frames';
+export type TaskKind = 'project-generation' | 'character-reference' | 'sticker-sheet' | 'animation-frames' | 'popup-frames' | 'effect-frames';
 export type ProvenanceMark = 'none' | 'visible' | 'unknown';
 
 export interface StickerSpec {
@@ -15,6 +15,7 @@ export interface StickerSpec {
 export interface StickerAsset {
   id: string; name: string; dataUrl: string; width: number; height: number; bytes: number;
   hasTransparency: boolean; provenanceMark: ProvenanceMark; sourceProvider?: GenerationProvider; visualHash?: string;
+  gridIndex: number; included: boolean; selectedAt?: number;
 }
 
 export interface AnimationFrame { id: string; dataUrl: string; delayMs: number }
@@ -29,6 +30,11 @@ export interface CaptionSlot {
 
 export interface StyleRecipe {
   primary: string; palette: string; outline: string; rendering: string; shape: string;
+}
+
+export interface ReferencePhoto {
+  id: string; name: string; type: 'image/png' | 'image/jpeg' | 'image/webp';
+  width: number; height: number; bytes: number; hash: string; order: number; primary: boolean;
 }
 
 export interface GenerationTask {
@@ -46,12 +52,13 @@ export interface ComplianceReport {
 }
 
 export interface ProjectSettings {
-  character: string; count: StickerCount; columns: number; padding: number; fontSize: number; loops: number;
+  character: string; count: StickerCount; rows: number; columns: number; padding: number; fontSize: number; loops: number;
 }
 
 export interface StickerProject {
-  version: 3; name: string; type: StickerType; generationProvider: GenerationProvider;
+  version: 4; name: string; type: StickerType; generationProvider: GenerationProvider;
   settings: ProjectSettings; captionSlots: CaptionSlot[]; styleRecipe: StyleRecipe;
+  referencePhotos: ReferencePhoto[]; photoRightsConfirmed: boolean;
   sourceDataUrl: string; stickers: StickerAsset[]; animationSets: Record<string, AnimationFrame[]>;
   generationTasks: GenerationTask[]; generationAttempts: GenerationAttempt[];
   rightsConfirmed: boolean; complianceReport: ComplianceReport; updatedAt: number;
