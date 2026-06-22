@@ -12,9 +12,9 @@ export function Header({ onExport, exporting }: { onExport: () => void; exportin
     <div className="toolbar">
       <button className="icon-button" disabled={!canUndo} onClick={() => dispatch({ type: 'undo' })} title="復原">↶</button>
       <button className="icon-button" disabled={!canRedo} onClick={() => dispatch({ type: 'redo' })} title="重做">↷</button>
-      <button className="ghost-button" onClick={saveProject}>儲存專案</button>
+      <button className="ghost-button" onClick={() => void saveProject()}>儲存專案</button>
       <button className="ghost-button" onClick={() => inputRef.current?.click()}>載入專案</button>
-      <input ref={inputRef} hidden type="file" accept="application/json,.json" onChange={(event) => {
+      <input ref={inputRef} hidden type="file" accept="application/json,.json,application/zip,.zip" onChange={(event) => {
         const file = event.target.files?.[0]; if (file) void loadProject(file);
       }} />
       <button className="primary-button" disabled={!project.stickers.length || exporting} onClick={onExport}>

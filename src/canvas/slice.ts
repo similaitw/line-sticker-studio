@@ -2,7 +2,7 @@ import { createAsset, loadImage } from './image';
 import type { GenerationProvider, ProvenanceMark, StickerAsset } from '../domain/types';
 
 interface SliceOptions {
-  count: number; columns: number; padding: number;
+  count: number; targetCount: number; rows: number; columns: number; padding: number;
   outputWidth: number; outputHeight: number;
   overlayTexts?: { text: string; visible: boolean }[]; fontSize?: number;
   provenanceMark?: ProvenanceMark; sourceProvider?: GenerationProvider;
@@ -10,7 +10,7 @@ interface SliceOptions {
 
 export async function sliceSheet(dataUrl: string, options: SliceOptions): Promise<StickerAsset[]> {
   const image = await loadImage(dataUrl);
-  const rows = Math.ceil(options.count / options.columns);
+  const rows = options.rows;
   const cellWidth = image.naturalWidth / options.columns;
   const cellHeight = image.naturalHeight / rows;
   const assets: StickerAsset[] = [];
@@ -40,7 +40,7 @@ export async function sliceSheet(dataUrl: string, options: SliceOptions): Promis
     const output = canvas.toDataURL('image/png');
     const visualHash = averageHash(ctx, canvas.width, canvas.height);
     assets.push(createAsset(`${String(index + 1).padStart(2, '0')}.png`, output, options.outputWidth, options.outputHeight, hasTransparency,
-      options.provenanceMark ?? 'unknown', options.sourceProvider, visualHash));
+      options.provenanceMark ?? 'unknown', options.sourceProvider, visualHash, index, index < options.targetCount, index < options.targetCount ? index + 1 : undefined));
   }
   return assets;
 }
@@ -69,11 +69,10 @@ function drawOverlayText(ctx: CanvasRenderingContext2D, text: string, width: num
 }
 
 export function drawSheetPreview(
-  canvas: HTMLCanvasElement, image: HTMLImageElement, count: number, columns: number,
+  canvas: HTMLCanvasElement, image: HTMLImageElement, count: number, rows: number, columns: number,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const rows = Math.ceil(count / columns);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
   ctx.save(); ctx.strokeStyle = 'rgba(15, 23, 42, .65)'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]);

@@ -1,13 +1,37 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
-test('雙平台、七類貼圖與本機範例流程', async ({ page }) => {
+test('雙平台、照片、候選網格與本機範例流程', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'LINE Sticker Studio' })).toBeVisible();
   await expect(page.getByRole('tab')).toHaveCount(7);
   await page.getByRole('button', { name: /Gemini/ }).click();
-  await expect(page.getByText('目前平台：Gemini')).toBeVisible();
+  await expect(page.getByText(/Gemini · 一份 MD/)).toBeVisible();
+  await expect(page.getByText('3×3＝9 格')).toBeVisible();
+  const photoInput = page.locator('.photo-section input[type="file"]');
+  await photoInput.setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+Xw4WAAAAAElFTkSuQmCC', 'base64') });
+  await expect(page.getByText('me.png')).toBeVisible();
+  await page.getByLabel(/我確認擁有照片使用權/).check();
+  const mdDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: '下載完整產圖 MD' }).click();
+  const mdPath = await (await mdDownload).path();
+  expect(mdPath).toBeTruthy();
+  const markdown = await readFile(mdPath!, 'utf8');
+  expect(markdown).toContain('line-sticker-task/v2');
+  expect(markdown).toContain('me.png');
+  expect(markdown).toContain('3 columns and 3 rows');
+  const backupDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: '儲存專案' }).click();
+  const backupPath = await (await backupDownload).path();
+  expect(backupPath).toBeTruthy();
+  await page.reload();
+  await page.locator('header input[type="file"]').setInputFiles(backupPath!);
+  await expect(page.getByText('me.png')).toBeVisible();
   await page.getByRole('tab', { name: /大貼圖/ }).click();
   await expect(page.getByText(/最大 396×660/)).toBeVisible();
   await page.getByRole('button', { name: '載入範例' }).click();
-  await expect(page.getByText('已切割 8 張')).toBeVisible();
+  await expect(page.getByText('已切割 9 張')).toBeVisible();
+  await expect(page.getByText('候選 9 張 · 入選 8/8')).toBeVisible();
+  await page.getByRole('button', { name: '設為入選' }).click();
+  await expect(page.getByText('候選 9 張 · 入選 8/8')).toBeVisible();
 });

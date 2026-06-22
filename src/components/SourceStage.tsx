@@ -10,10 +10,10 @@ export function SourceStage({ onUpload, onSlice, onSample, busy }: Props) {
     if (!project.sourceDataUrl || !canvasRef.current) return;
     let active = true;
     void loadImage(project.sourceDataUrl).then((image) => {
-      if (active && canvasRef.current) drawSheetPreview(canvasRef.current, image, project.settings.count, project.settings.columns);
+      if (active && canvasRef.current) drawSheetPreview(canvasRef.current, image, project.settings.rows * project.settings.columns, project.settings.rows, project.settings.columns);
     });
     return () => { active = false; };
-  }, [project.sourceDataUrl, project.settings.count, project.settings.columns]);
+  }, [project.sourceDataUrl, project.settings.rows, project.settings.columns]);
   return <section className="stage panel">
     <div className="stage-title"><div><span className="eyebrow">SOURCE SHEET</span><h2>貼圖表預覽</h2></div>
       <span className="status">{busy ? '處理中…' : project.sourceDataUrl ? `已切割 ${project.stickers.length} 張` : '準備就緒'}</span>
