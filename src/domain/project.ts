@@ -1,5 +1,6 @@
 import { getSpec } from './specs';
 import { SUBJECT_CATALOG_VERSION } from './subjectCatalog';
+import { cleanLegacyDefaultCharacter } from './subjectDescription';
 import type { CaptionSlot, StickerProject, StickerType, StyleRecipe, SubjectProfile } from './types';
 
 const DEFAULT_CAPTIONS = ['收到', 'OK', '謝謝', '加油', '等一下', '太棒了', '哭哭', '晚安', '讚啦'];
@@ -79,7 +80,11 @@ export function migrateV4(value: V4Project): StickerProject {
 }
 
 function legacySubject(character: string): SubjectProfile {
-  return { ...DEFAULT_SUBJECT_PROFILE, baseMode: 'custom', customSubject: '', personalityIds: [], propIds: [], roleId: 'none', extraDetails: character || '' };
+  return { ...DEFAULT_SUBJECT_PROFILE, baseMode: 'custom', customSubject: '', personalityIds: [], propIds: [], roleId: 'none', extraDetails: cleanLegacyDefaultCharacter(character || '') };
+}
+
+function normalizeV5(project: StickerProject): StickerProject {
+  return { ...project, subjectProfile: { ...project.subjectProfile, extraDetails: cleanLegacyDefaultCharacter(project.subjectProfile.extraDetails || '') } };
 }
 
 export function fillCaptionSlots(items: CaptionSlot[], count: number): CaptionSlot[] {
@@ -99,5 +104,5 @@ export function parseProject(raw: string): StickerProject {
   if (value.version === 3) return migrateV3(value);
   if (value.version === 4) return migrateV4(value);
   if (value.version !== 5 || !value.type || !value.settings || !value.subjectProfile) throw new Error('不支援的專案格式');
-  return value;
+  return normalizeV5(value);
 }
