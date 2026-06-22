@@ -1,6 +1,7 @@
 import { getSpec } from '../domain/specs';
 import { fillCaptionSlots, RECOMMENDED_GRIDS } from '../domain/project';
 import { useProject } from '../state/ProjectContext';
+import { SubjectDesigner } from './SubjectDesigner';
 
 export function SettingsPanel() {
   const { project, updateSettings, dispatch } = useProject(); const { settings } = project; const spec = getSpec(project.type); const cellCount = settings.rows * settings.columns;
@@ -11,7 +12,7 @@ export function SettingsPanel() {
     dispatch({ type: 'update', patch: { settings: { ...settings, rows, columns }, captionSlots: fillCaptionSlots(project.captionSlots, cells), stickers: [] } }); }
   return <aside className="settings-panel panel">
     <div className="section-heading compact"><span>2</span><div><h2>設計設定</h2><p>{spec.label} · 最大 {spec.width}×{spec.height}</p></div></div>
-    <label className="field"><span>角色描述</span><textarea rows={5} value={settings.character} onChange={(e) => updateSettings({ character: e.target.value })} /></label>
+    <SubjectDesigner />
     <div className="field-grid"><label className="field"><span>LINE 入選張數</span><select value={settings.count} onChange={(e) => setCount(Number(e.target.value) as typeof settings.count)}>
       {spec.counts.map((count) => <option key={count} value={count}>{count} 張</option>)}</select></label>
       <label className="field"><span>生成格數</span><strong className="grid-total">{settings.rows}×{settings.columns}＝{cellCount} 格</strong></label></div>

@@ -1,10 +1,15 @@
 import { getSpec } from './specs';
-import type { CaptionSlot, StickerProject, StickerType, StyleRecipe } from './types';
+import { SUBJECT_CATALOG_VERSION } from './subjectCatalog';
+import type { CaptionSlot, StickerProject, StickerType, StyleRecipe, SubjectProfile } from './types';
 
 const DEFAULT_CAPTIONS = ['收到', 'OK', '謝謝', '加油', '等一下', '太棒了', '哭哭', '晚安', '讚啦'];
 
 export const DEFAULT_STYLE: StyleRecipe = {
   primary: 'mascot', palette: 'vivid', outline: 'bold', rendering: 'soft', shape: 'rounded',
+};
+export const DEFAULT_SUBJECT_PROFILE: SubjectProfile = {
+  catalogVersion: SUBJECT_CATALOG_VERSION, baseMode: 'catalog', categoryId: 'animals', itemId: 'taiwan-black-bear', customSubject: '',
+  roleId: 'office-life', personalityIds: ['dramatic'], propIds: [], extraDetails: '',
 };
 
 function slot(text: string, index: number): CaptionSlot {
@@ -14,9 +19,10 @@ function slot(text: string, index: number): CaptionSlot {
 export function createProject(type: StickerType = 'static'): StickerProject {
   const spec = getSpec(type);
   return {
-    version: 4, name: '我的 LINE 貼圖', type, generationProvider: 'chatgpt',
-    settings: { character: '一隻圓滾滾的台灣黑熊，上班族襯衫，表情誇張可愛', count: spec.counts[0], rows: 3, columns: 3, padding: 10, fontSize: 42, loops: spec.minLoops ?? 1 },
+    version: 5, name: '我的 LINE 貼圖', type, generationProvider: 'chatgpt',
+    settings: { character: '', count: spec.counts[0], rows: 3, columns: 3, padding: 10, fontSize: 42, loops: spec.minLoops ?? 1 },
     captionSlots: DEFAULT_CAPTIONS.map(slot), styleRecipe: DEFAULT_STYLE,
+    subjectProfile: { ...DEFAULT_SUBJECT_PROFILE, personalityIds: [...DEFAULT_SUBJECT_PROFILE.personalityIds], propIds: [] },
     referencePhotos: [], photoRightsConfirmed: false,
     sourceDataUrl: '', stickers: [], animationSets: {}, generationTasks: [], generationAttempts: [],
     rightsConfirmed: false, complianceReport: { checkedAt: 0, blockingCount: 0, warningCount: 0 }, updatedAt: Date.now(),
@@ -40,9 +46,10 @@ interface V2Project {
   sourceDataUrl: string; stickers: StickerProject['stickers']; frames?: StickerProject['animationSets'][string]; updatedAt: number;
 }
 
-interface V3Project extends Omit<StickerProject, 'version' | 'settings' | 'referencePhotos' | 'photoRightsConfirmed'> {
+interface V3Project extends Omit<StickerProject, 'version' | 'settings' | 'referencePhotos' | 'photoRightsConfirmed' | 'subjectProfile'> {
   version: 3; settings: Omit<StickerProject['settings'], 'rows'>;
 }
+interface V4Project extends Omit<StickerProject, 'version' | 'subjectProfile'> { version: 4 }
 
 export function migrateV2(value: V2Project): StickerProject {
   const base = createProject(value.type);
@@ -50,7 +57,7 @@ export function migrateV2(value: V2Project): StickerProject {
   const stickers = (value.stickers || []).map((asset, index) => ({ ...asset, provenanceMark: asset.provenanceMark ?? 'unknown' as const,
     gridIndex: index, included: index < value.settings.count, selectedAt: index < value.settings.count ? index + 1 : undefined }));
   const firstId = stickers[0]?.id;
-  return { ...base, name: value.name, settings: { ...base.settings, character: value.settings.character, count: value.settings.count, columns: value.settings.columns, padding: value.settings.padding, fontSize: value.settings.fontSize, loops: value.settings.loops },
+  return { ...base, name: value.name, settings: { ...base.settings, character: value.settings.character, count: value.settings.count, columns: value.settings.columns, padding: value.settings.padding, fontSize: value.settings.fontSize, loops: value.settings.loops }, subjectProfile: legacySubject(value.settings.character),
     captionSlots: phrases.map(slot), sourceDataUrl: value.sourceDataUrl, stickers,
     animationSets: firstId && value.frames?.length ? { [firstId]: value.frames } : {}, updatedAt: value.updatedAt };
 }
@@ -60,11 +67,19 @@ export function migrateV3(value: V3Project): StickerProject {
   const count = value.settings.count;
   const columns = Math.min(8, Math.max(2, value.settings.columns || 3));
   const rows = Math.min(8, Math.max(2, Math.ceil(count / columns)));
-  return { ...value, version: 4, settings: { ...value.settings, rows, columns },
+  return { ...value, version: 5, settings: { ...value.settings, rows, columns },
     captionSlots: fillCaptionSlots(value.captionSlots, rows * columns),
     stickers: value.stickers.map((asset, index) => ({ ...asset, gridIndex: index, included: index < count, selectedAt: index < count ? index + 1 : undefined })),
-    referencePhotos: [], photoRightsConfirmed: false,
+    referencePhotos: [], photoRightsConfirmed: false, subjectProfile: legacySubject(value.settings.character),
     complianceReport: value.complianceReport ?? base.complianceReport };
+}
+
+export function migrateV4(value: V4Project): StickerProject {
+  return { ...value, version: 5, subjectProfile: legacySubject(value.settings.character) };
+}
+
+function legacySubject(character: string): SubjectProfile {
+  return { ...DEFAULT_SUBJECT_PROFILE, baseMode: 'custom', customSubject: '', personalityIds: [], propIds: [], roleId: 'none', extraDetails: character || '' };
 }
 
 export function fillCaptionSlots(items: CaptionSlot[], count: number): CaptionSlot[] {
@@ -79,9 +94,10 @@ export const RECOMMENDED_GRIDS: Record<number, { rows: number; columns: number }
 };
 
 export function parseProject(raw: string): StickerProject {
-  const value = JSON.parse(raw) as StickerProject | V3Project | V2Project;
+  const value = JSON.parse(raw) as StickerProject | V4Project | V3Project | V2Project;
   if (value.version === 2) return migrateV2(value);
   if (value.version === 3) return migrateV3(value);
-  if (value.version !== 4 || !value.type || !value.settings) throw new Error('不支援的專案格式');
+  if (value.version === 4) return migrateV4(value);
+  if (value.version !== 5 || !value.type || !value.settings || !value.subjectProfile) throw new Error('不支援的專案格式');
   return value;
 }

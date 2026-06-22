@@ -1,5 +1,6 @@
 import { getSpec } from './specs';
 import type { StickerProject, ValidationIssue } from './types';
+import { validateSubjectProfile } from './subjectDescription';
 
 const ONE_MB=1024*1024;
 export function validateProject(project:StickerProject):ValidationIssue[]{const spec=getSpec(project.type);const issues:ValidationIssue[]=[];
@@ -10,6 +11,7 @@ export function validateProject(project:StickerProject):ValidationIssue[]{const 
   if(project.stickers.length!==cellCount)issues.push({level:'error',code:'CANDIDATE_COUNT',message:`候選素材須為 ${cellCount} 張，目前 ${project.stickers.length} 張`});
   if(selected.length!==project.settings.count)issues.push({level:'error',code:'ASSET_COUNT',message:`須入選 ${project.settings.count} 張，目前 ${selected.length} 張`});
   if(!project.rightsConfirmed)issues.push({level:'error',code:'RIGHTS',message:'尚未確認著作權、肖像權、商標與非廣告用途'});
+  for(const message of validateSubjectProfile(project.subjectProfile,project.referencePhotos.length>0))issues.push({level:'error',code:'SUBJECT_PROFILE',message});
   if(project.referencePhotos.length&&!project.photoRightsConfirmed)issues.push({level:'error',code:'PHOTO_RIGHTS',message:'尚未確認參考照片使用權及肖像同意'});
   for(const asset of selected){
     if(asset.width%2||asset.height%2)issues.push({level:'error',code:'EVEN_SIZE',message:'寬高必須是偶數',assetName:asset.name});

@@ -4,6 +4,7 @@ import { buildTaskMarkdown, createGenerationTask, parseTaskMarkdown, providerUrl
 import type { GenerationTask } from '../domain/types';
 import { fillCaptionSlots } from '../domain/project';
 import { getReferencePhoto } from '../storage/referencePhotos';
+import { validateSubjectProfile } from '../domain/subjectDescription';
 import { useProject } from '../state/ProjectContext';
 
 export function TaskPanel() {
@@ -12,6 +13,7 @@ export function TaskPanel() {
   async function create() {
     setError('');
     if (project.captionSlots.length !== cellCount) return setError(`每個候選格都需要文字／動作，目前 ${project.captionSlots.length}/${cellCount}`);
+    const subjectIssues=validateSubjectProfile(project.subjectProfile,project.referencePhotos.length>0);if(subjectIssues.length)return setError(subjectIssues[0]);
     if (project.referencePhotos.length && !project.photoRightsConfirmed) return setError('請先確認參考照片使用權與肖像同意');
     for (const photo of project.referencePhotos) if (!await getReferencePhoto(photo.id)) return setError(`找不到參考照片：${photo.name}`);
     const task = createGenerationTask(project); const markdown = buildTaskMarkdown(project, task);
@@ -26,6 +28,7 @@ export function TaskPanel() {
     try { const manifest = parseTaskMarkdown(await file.text()); const targetCount = (manifest.targetCount ?? manifest.count) as typeof project.settings.count; const cells = manifest.cellCount ?? manifest.count;
       dispatch({ type: 'update', patch: (current) => ({ ...current, generationProvider: manifest.provider,
         settings: { ...current.settings, character: manifest.character, count: targetCount, rows: manifest.rows, columns: manifest.columns },
+        subjectProfile: manifest.subjectProfile ?? { ...current.subjectProfile, baseMode: 'custom', customSubject: '', roleId: 'none', personalityIds: [], propIds: [], extraDetails: manifest.character },
         captionSlots: fillCaptionSlots(manifest.captions.map((item) => ({ id: crypto.randomUUID(), phraseId: `md-${item.index}`, text: item.text, category: 'MD 匯入', intent: item.intent, visible: item.visible })), cells),
       }) }); setError('');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'MD 匯入失敗'); }

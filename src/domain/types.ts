@@ -32,6 +32,19 @@ export interface StyleRecipe {
   primary: string; palette: string; outline: string; rendering: string; shape: string;
 }
 
+export interface SubjectProfile {
+  catalogVersion: string; baseMode: 'catalog' | 'custom'; categoryId: string; itemId: string;
+  customSubject: string; roleId: string; personalityIds: string[]; propIds: string[]; extraDetails: string;
+}
+
+export interface SubjectCategory { id: string; label: string; description: string; sortOrder: number }
+export interface SubjectItem { id: string; categoryId: string; label: string; prompt: string; trend: boolean; sortOrder: number }
+export interface SubjectOption { id: string; label: string; prompt: string; trend?: boolean }
+export interface CatalogSnapshot {
+  version: string; generatedAt: string; sourceLabel: string; categories: SubjectCategory[]; items: SubjectItem[];
+  roles: SubjectOption[]; personalities: SubjectOption[]; props: SubjectOption[];
+}
+
 export interface ReferencePhoto {
   id: string; name: string; type: 'image/png' | 'image/jpeg' | 'image/webp';
   width: number; height: number; bytes: number; hash: string; order: number; primary: boolean;
@@ -56,8 +69,9 @@ export interface ProjectSettings {
 }
 
 export interface StickerProject {
-  version: 4; name: string; type: StickerType; generationProvider: GenerationProvider;
+  version: 5; name: string; type: StickerType; generationProvider: GenerationProvider;
   settings: ProjectSettings; captionSlots: CaptionSlot[]; styleRecipe: StyleRecipe;
+  subjectProfile: SubjectProfile;
   referencePhotos: ReferencePhoto[]; photoRightsConfirmed: boolean;
   sourceDataUrl: string; stickers: StickerAsset[]; animationSets: Record<string, AnimationFrame[]>;
   generationTasks: GenerationTask[]; generationAttempts: GenerationAttempt[];
