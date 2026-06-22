@@ -23,8 +23,14 @@ test('雙平台、照片、候選網格與本機範例流程', async ({ page }) 
   const mdPath = await (await mdDownload).path();
   expect(mdPath).toBeTruthy();
   const markdown = await readFile(mdPath!, 'utf8');
-  expect(markdown).toContain('line-sticker-task/v3');
+  expect(markdown).toContain('line-sticker-task/v4');
   expect(markdown).toContain('me.png');
+  expect(markdown).toContain('ONLY appearance and identity source');
+  expect(markdown).toContain('STOP and ask me to re-upload');
+  expect(markdown).not.toContain('taiwan-black-bear');
+  expect(markdown).not.toContain('台灣黑熊');
+  expect(markdown.toLowerCase()).not.toContain('black bear');
+  expect(markdown).not.toContain('"categoryId": "plants"');
   expect(markdown).toContain('3 columns and 3 rows');
   const backupDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: '儲存專案' }).click();

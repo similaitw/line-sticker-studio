@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { downloadBlob } from '../export/exportZip';
 import { buildTaskMarkdown, createGenerationTask, parseTaskMarkdown, providerUrl } from '../providers/tasks';
-import type { GenerationTask } from '../domain/types';
+import type { TaskManifest } from '../providers/tasks';
+import type { GenerationTask, StickerProject } from '../domain/types';
 import { fillCaptionSlots } from '../domain/project';
 import { getReferencePhoto } from '../storage/referencePhotos';
 import { validateSubjectProfile } from '../domain/subjectDescription';
@@ -28,7 +29,7 @@ export function TaskPanel() {
     try { const manifest = parseTaskMarkdown(await file.text()); const targetCount = (manifest.targetCount ?? manifest.count) as typeof project.settings.count; const cells = manifest.cellCount ?? manifest.count;
       dispatch({ type: 'update', patch: (current) => ({ ...current, generationProvider: manifest.provider,
         settings: { ...current.settings, character: manifest.character, count: targetCount, rows: manifest.rows, columns: manifest.columns },
-        subjectProfile: manifest.subjectProfile ?? { ...current.subjectProfile, baseMode: 'custom', customSubject: '', roleId: 'none', personalityIds: [], propIds: [], extraDetails: manifest.character },
+        subjectProfile: mergeImportedSubject(current.subjectProfile, manifest),
         captionSlots: fillCaptionSlots(manifest.captions.map((item) => ({ id: crypto.randomUUID(), phraseId: `md-${item.index}`, text: item.text, category: 'MD 匯入', intent: item.intent, visible: item.visible })), cells),
       }) }); setError('');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'MD 匯入失敗'); }
@@ -41,4 +42,13 @@ export function TaskPanel() {
     {project.generationTasks.length > 0 && <div className="task-list">{project.generationTasks.slice(-6).reverse().map((task) => <div key={task.id}><span>{task.provider === 'chatgpt' ? 'ChatGPT' : 'Gemini'} · 完整任務</span><small>{task.status}</small><button onClick={() => downloadTask(task)}>重新下載</button></div>)}</div>}
     {project.generationAttempts.length > 0 && <div className="attempt-list"><strong>匯入紀錄</strong>{project.generationAttempts.slice(-4).reverse().map((attempt) => <span key={attempt.id}>{attempt.provider} · {attempt.sourceHash.slice(0, 10)} · {attempt.provenanceMark}</span>)}</div>}
   </section>;
+}
+
+export function mergeImportedSubject(current: StickerProject['subjectProfile'], manifest: TaskManifest): StickerProject['subjectProfile'] {
+  const generated = manifest.generationSubject;
+  if (!generated) return manifest.subjectProfile ?? { ...current, baseMode: 'custom', customSubject: '', roleId: 'none', personalityIds: [], propIds: [], extraDetails: manifest.character };
+  const shared = { roleId: generated.roleId, personalityIds: generated.personalityIds, propIds: generated.propIds, extraDetails: generated.extraDetails };
+  if (generated.source === 'photo') return { ...current, ...shared };
+  if (generated.source === 'custom') return { ...current, ...shared, baseMode: 'custom', customSubject: generated.customSubject };
+  return { ...current, ...shared, baseMode: 'catalog', categoryId: generated.categoryId, itemId: generated.itemId };
 }
