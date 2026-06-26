@@ -22,7 +22,7 @@ export default function App() {
   const processSource = useCallback(async (dataUrl:string, fromProvider=true) => {
     const spec=getSpec(project.type); const mark=fromProvider?await detectProvenanceMark(dataUrl,project.generationProvider):'none';
     const cellCount=project.settings.rows*project.settings.columns; const stickers=await sliceSheet(dataUrl,{count:cellCount,targetCount:project.settings.count,rows:project.settings.rows,columns:project.settings.columns,padding:project.settings.padding,outputWidth:spec.width,outputHeight:spec.height,
-      overlayTexts:project.captionSlots, fontSize:project.settings.fontSize, provenanceMark:mark, sourceProvider:fromProvider?project.generationProvider:undefined});
+      sliceGuides:project.settings.sliceGuides, overlayTexts:project.captionSlots, fontSize:project.settings.fontSize, provenanceMark:mark, sourceProvider:fromProvider?project.generationProvider:undefined});
     const latest=project.generationTasks.filter((item)=>item.status==='exported').at(-1); const attempts=latest?[...project.generationAttempts,{id:crypto.randomUUID(),taskId:latest.id,provider:project.generationProvider,sourceHash:await simpleHash(dataUrl),importedAt:Date.now(),provenanceMark:mark}]:project.generationAttempts;
     dispatch({type:'update',patch:{sourceDataUrl:dataUrl,stickers,generationAttempts:attempts,generationTasks:project.generationTasks.map((item)=>item.id===latest?.id?{...item,status:'imported'}:item)}});
   },[project,dispatch]);

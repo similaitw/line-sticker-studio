@@ -21,7 +21,7 @@ export function createProject(type: StickerType = 'static'): StickerProject {
   const spec = getSpec(type);
   return {
     version: 5, name: '我的 LINE 貼圖', type, generationProvider: 'chatgpt',
-    settings: { character: '', count: spec.counts[0], rows: 3, columns: 3, padding: 10, fontSize: 42, loops: spec.minLoops ?? 1 },
+    settings: { character: '', count: spec.counts[0], rows: 3, columns: 3, padding: 0, fontSize: 42, loops: spec.minLoops ?? 1 },
     captionSlots: DEFAULT_CAPTIONS.map(slot), styleRecipe: DEFAULT_STYLE,
     subjectProfile: { ...DEFAULT_SUBJECT_PROFILE, personalityIds: [...DEFAULT_SUBJECT_PROFILE.personalityIds], propIds: [] },
     referencePhotos: [], photoRightsConfirmed: false,

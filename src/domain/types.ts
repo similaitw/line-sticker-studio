@@ -66,6 +66,7 @@ export interface ComplianceReport {
 
 export interface ProjectSettings {
   character: string; count: StickerCount; rows: number; columns: number; padding: number; fontSize: number; loops: number;
+  sliceGuides?: { x: number[]; y: number[] };
 }
 
 export interface StickerProject {
