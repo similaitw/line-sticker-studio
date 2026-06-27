@@ -1,15 +1,17 @@
 import { createAsset, loadImage } from './image';
+import { ensureFontLoaded, fontStackFor } from '../domain/fonts';
 import type { GenerationProvider, ProvenanceMark, StickerAsset } from '../domain/types';
 
 interface SliceOptions {
   count: number; targetCount: number; rows: number; columns: number; padding: number;
   outputWidth: number; outputHeight: number;
   sliceGuides?: { x: number[]; y: number[] };
-  overlayTexts?: { text: string; visible: boolean }[]; fontSize?: number;
+  overlayTexts?: { text: string; visible: boolean }[]; fontSize?: number; fontFamily?: string;
   provenanceMark?: ProvenanceMark; sourceProvider?: GenerationProvider;
 }
 
 export async function sliceSheet(dataUrl: string, options: SliceOptions): Promise<StickerAsset[]> {
+  await ensureFontLoaded(options.fontFamily, 900);
   const image = await loadImage(dataUrl);
   const rows = options.rows;
   const xEdges = guideEdges(options.columns, image.naturalWidth, options.sliceGuides?.x);
@@ -29,7 +31,7 @@ export async function sliceSheet(dataUrl: string, options: SliceOptions): Promis
     const cropHeight = Math.max(1, yEdges[row + 1] - yEdges[row] - options.padding * 2);
     drawTrimmedSticker(ctx, image, sourceX, sourceY, cropWidth, cropHeight, options.outputWidth, options.outputHeight);
     const caption = options.overlayTexts?.[index];
-    if (caption?.visible && caption.text) drawOverlayText(ctx, caption.text, options.outputWidth, options.outputHeight, options.fontSize ?? 42);
+    if (caption?.visible && caption.text) drawOverlayText(ctx, caption.text, options.outputWidth, options.outputHeight, options.fontSize ?? 42, options.fontFamily ?? 'Noto Sans TC');
     const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let hasTransparency = false;
     for (let offset = 3; offset < pixels.length; offset += 4) {
@@ -101,9 +103,9 @@ function averageHash(ctx: CanvasRenderingContext2D, width: number, height: numbe
   return values.map((value) => value >= average ? '1' : '0').join('').match(/.{4}/g)?.map((bits) => Number.parseInt(bits, 2).toString(16)).join('') ?? '';
 }
 
-function drawOverlayText(ctx: CanvasRenderingContext2D, text: string, width: number, height: number, fontSize: number) {
+function drawOverlayText(ctx: CanvasRenderingContext2D, text: string, width: number, height: number, fontSize: number, fontFamily: string) {
   ctx.save();
-  ctx.font = `900 ${fontSize}px "Noto Sans TC", sans-serif`;
+  ctx.font = `900 ${fontSize}px ${fontStackFor(fontFamily)}`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
   ctx.lineWidth = Math.max(6, fontSize * 0.22); ctx.strokeStyle = '#fff'; ctx.fillStyle = '#111827';
   const y = height - fontSize * 0.85;
@@ -114,7 +116,7 @@ function drawOverlayText(ctx: CanvasRenderingContext2D, text: string, width: num
 
 export function drawSheetPreview(
   canvas: HTMLCanvasElement, image: HTMLImageElement, count: number, rows: number, columns: number,
-  sliceGuides?: { x: number[]; y: number[] },
+  sliceGuides?: { x: number[]; y: number[] }, overlayTexts?: { text: string; visible: boolean }[], fontSize = 42, fontFamily = 'Noto Sans TC',
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -127,10 +129,26 @@ export function drawSheetPreview(
   for (let index = 0; index < count; index += 1) {
     const col = index % columns; const row = Math.floor(index / columns);
     ctx.strokeRect(xEdges[col], yEdges[row], xEdges[col + 1] - xEdges[col], yEdges[row + 1] - yEdges[row]);
+    const caption = overlayTexts?.[index];
+    if (caption?.visible && caption.text) drawPreviewOverlayText(ctx, caption.text, xEdges[col], yEdges[row], xEdges[col + 1] - xEdges[col], yEdges[row + 1] - yEdges[row], fontSize, fontFamily);
   }
   ctx.setLineDash([]); ctx.strokeStyle = 'rgba(6, 199, 85, .95)'; ctx.lineWidth = 4;
   for (const value of guides.x) { const x = value * canvas.width; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
   for (const value of guides.y) { const y = value * canvas.height; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+  ctx.restore();
+}
+
+function drawPreviewOverlayText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, width: number, height: number, fontSize: number, fontFamily: string) {
+  ctx.save();
+  const scaledSize = Math.min(56, Math.max(16, fontSize * width / 370));
+  ctx.font = `900 ${scaledSize}px ${fontStackFor(fontFamily)}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  ctx.setLineDash([]);
+  ctx.lineWidth = Math.max(4, scaledSize * 0.2); ctx.strokeStyle = '#fff'; ctx.fillStyle = '#111827';
+  ctx.shadowColor = 'rgba(15, 23, 42, .22)'; ctx.shadowBlur = Math.max(2, scaledSize * 0.08); ctx.shadowOffsetY = 2;
+  const textY = y + height - scaledSize * 0.85;
+  ctx.strokeText(text, x + width / 2, textY, width * 0.84);
+  ctx.fillText(text, x + width / 2, textY, width * 0.84);
   ctx.restore();
 }
 

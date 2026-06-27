@@ -20,8 +20,6 @@ export function SettingsPanel() {
       {Array.from({ length: 7 }, (_, index) => index + 2).map((value) => <option key={value} value={value} disabled={value * settings.columns < settings.count}>{value} 行</option>)}</select></label>
       <label className="field"><span>列數</span><select value={settings.columns} onChange={(e) => setGrid(settings.rows, Number(e.target.value))}>
         {Array.from({ length: 7 }, (_, index) => index + 2).map((value) => <option key={value} value={value} disabled={value * settings.rows < settings.count}>{value} 列</option>)}</select></label></div>
-    <label className="field range-field"><span>切割內縮 <b>{settings.padding}px</b></span><input type="range" min="0" max="40" value={settings.padding} onChange={(e) => updateSettings({ padding: Number(e.target.value) })} /></label>
-    <label className="field range-field"><span>文字大小 <b>{settings.fontSize}px</b></span><input type="range" min="24" max="72" value={settings.fontSize} onChange={(e) => updateSettings({ fontSize: Number(e.target.value) })} /></label>
     {spec.animated && <label className="field"><span>循環次數</span><select value={settings.loops} onChange={(e) => updateSettings({ loops: Number(e.target.value) })}>
       {Array.from({ length:(spec.maxLoops ?? 1)-(spec.minLoops ?? 1)+1 },(_,i)=>i+(spec.minLoops ?? 1)).map((value)=><option key={value}>{value}</option>)}</select></label>}
     <div className="local-only"><strong>100% 本機處理</strong><span>不使用 API Key，圖片不會上傳到本站。</span></div>

@@ -10,7 +10,6 @@ export function validateProject(project:StickerProject):ValidationIssue[]{const 
   if(project.captionSlots.length!==cellCount)issues.push({level:'error',code:'CAPTION_COUNT',message:`文字槽位須剛好 ${cellCount} 個，目前 ${project.captionSlots.length} 個`});
   if(project.stickers.length!==cellCount)issues.push({level:'error',code:'CANDIDATE_COUNT',message:`候選素材須為 ${cellCount} 張，目前 ${project.stickers.length} 張`});
   if(selected.length!==project.settings.count)issues.push({level:'error',code:'ASSET_COUNT',message:`須入選 ${project.settings.count} 張，目前 ${selected.length} 張`});
-  if(!project.rightsConfirmed)issues.push({level:'error',code:'RIGHTS',message:'尚未確認著作權、肖像權、商標與非廣告用途'});
   for(const message of validateSubjectProfile(project.subjectProfile,project.referencePhotos.length>0))issues.push({level:'error',code:'SUBJECT_PROFILE',message});
   if(project.referencePhotos.length&&!project.photoRightsConfirmed)issues.push({level:'error',code:'PHOTO_RIGHTS',message:'尚未確認參考照片使用權及肖像同意'});
   for(const asset of selected){

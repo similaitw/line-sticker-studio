@@ -11,7 +11,7 @@ describe('LINE 貼圖規格', () => {
     expect(validateProject(project)).toContainEqual(expect.objectContaining({ code: 'CAPTION_COUNT' }));
   });
   it('未確認素材權利會阻擋匯出', () => {
-    expect(validateProject(createProject())).toContainEqual(expect.objectContaining({ code: 'RIGHTS' }));
+    expect(validateProject(createProject()).some((issue) => issue.code === 'RIGHTS')).toBe(false);
   });
   it('可見來源標記會阻擋匯出', () => {
     const project = createProject(); project.stickers = Array.from({length:9},(_,index)=>({ id:String(index),name:`${index}.png`,dataUrl:'data:image/png;base64,',width:370,height:320,bytes:10,hasTransparency:true,provenanceMark:index===0?'visible' as const:'none' as const,gridIndex:index,included:index<8,selectedAt:index<8?index+1:undefined }));

@@ -21,7 +21,7 @@ export function createProject(type: StickerType = 'static'): StickerProject {
   const spec = getSpec(type);
   return {
     version: 5, name: '我的 LINE 貼圖', type, generationProvider: 'chatgpt',
-    settings: { character: '', count: spec.counts[0], rows: 3, columns: 3, padding: 0, fontSize: 42, loops: spec.minLoops ?? 1 },
+    settings: { character: '', count: spec.counts[0], rows: 3, columns: 3, padding: 0, fontSize: 42, fontFamily: 'Noto Sans TC', loops: spec.minLoops ?? 1 },
     captionSlots: DEFAULT_CAPTIONS.map(slot), styleRecipe: DEFAULT_STYLE,
     subjectProfile: { ...DEFAULT_SUBJECT_PROFILE, personalityIds: [...DEFAULT_SUBJECT_PROFILE.personalityIds], propIds: [] },
     referencePhotos: [], photoRightsConfirmed: false,
@@ -68,7 +68,7 @@ export function migrateV3(value: V3Project): StickerProject {
   const count = value.settings.count;
   const columns = Math.min(8, Math.max(2, value.settings.columns || 3));
   const rows = Math.min(8, Math.max(2, Math.ceil(count / columns)));
-  return { ...value, version: 5, settings: { ...value.settings, rows, columns },
+  return { ...value, version: 5, settings: { ...value.settings, rows, columns, fontFamily: 'fontFamily' in value.settings ? String(value.settings.fontFamily) : 'Noto Sans TC' },
     captionSlots: fillCaptionSlots(value.captionSlots, rows * columns),
     stickers: value.stickers.map((asset, index) => ({ ...asset, gridIndex: index, included: index < count, selectedAt: index < count ? index + 1 : undefined })),
     referencePhotos: [], photoRightsConfirmed: false, subjectProfile: legacySubject(value.settings.character),
@@ -76,7 +76,7 @@ export function migrateV3(value: V3Project): StickerProject {
 }
 
 export function migrateV4(value: V4Project): StickerProject {
-  return { ...value, version: 5, subjectProfile: legacySubject(value.settings.character) };
+  return { ...value, version: 5, settings: { ...value.settings, fontFamily: value.settings.fontFamily ?? 'Noto Sans TC' }, subjectProfile: legacySubject(value.settings.character) };
 }
 
 function legacySubject(character: string): SubjectProfile {
@@ -84,7 +84,11 @@ function legacySubject(character: string): SubjectProfile {
 }
 
 function normalizeV5(project: StickerProject): StickerProject {
-  return { ...project, subjectProfile: { ...project.subjectProfile, extraDetails: cleanLegacyDefaultCharacter(project.subjectProfile.extraDetails || '') } };
+  return {
+    ...project,
+    settings: { ...project.settings, fontFamily: project.settings.fontFamily ?? 'Noto Sans TC' },
+    subjectProfile: { ...project.subjectProfile, extraDetails: cleanLegacyDefaultCharacter(project.subjectProfile.extraDetails || '') },
+  };
 }
 
 export function fillCaptionSlots(items: CaptionSlot[], count: number): CaptionSlot[] {

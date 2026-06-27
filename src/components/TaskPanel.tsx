@@ -37,7 +37,7 @@ export function TaskPanel() {
   return <section className="task-section panel"><div className="task-header"><div className="section-heading"><span>MD</span><div><h2>完整產圖任務</h2><p>{project.generationProvider === 'chatgpt' ? 'ChatGPT' : 'Gemini'} · 一份 MD 完成所有階段</p></div></div>
     <div className="task-tools"><button className="ghost-button" onClick={() => importRef.current?.click()}>匯入任務 MD</button><input ref={importRef} hidden type="file" accept=".md,text/markdown" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importTask(file); }} />
       <a className="ghost-button" href={providerUrl(project.generationProvider)} target="_blank" rel="noreferrer">開啟平台 ↗</a></div></div>
-    <div className="task-actions"><button className="primary-button" onClick={() => void create()}>下載完整產圖 MD</button><span>下載後與 {project.referencePhotos.length} 張照片同次上傳</span></div>
+    <div className="task-actions"><button className="primary-button" onClick={() => void create()}>下載完整產圖 MD</button><span>請先完成設計設定、文字詞庫與風格配方；下載後與 {project.referencePhotos.length} 張照片同次上傳</span></div>
     {error && <p className="photo-error">{error}</p>}
     {project.generationTasks.length > 0 && <div className="task-list">{project.generationTasks.slice(-6).reverse().map((task) => <div key={task.id}><span>{task.provider === 'chatgpt' ? 'ChatGPT' : 'Gemini'} · 完整任務</span><small>{task.status}</small><button onClick={() => downloadTask(task)}>重新下載</button></div>)}</div>}
     {project.generationAttempts.length > 0 && <div className="attempt-list"><strong>匯入紀錄</strong>{project.generationAttempts.slice(-4).reverse().map((attempt) => <span key={attempt.id}>{attempt.provider} · {attempt.sourceHash.slice(0, 10)} · {attempt.provenanceMark}</span>)}</div>}
