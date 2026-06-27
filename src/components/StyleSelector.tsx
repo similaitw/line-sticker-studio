@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { DEFAULT_STYLE } from '../domain/project';
 import { STYLE_OPTIONS, stylePrompt } from '../domain/styles';
 import type { StyleRecipe } from '../domain/types';
 import { useProject } from '../state/ProjectContext';
@@ -18,11 +19,16 @@ export function StyleSelector() {
   const { project, dispatch } = useProject();
   const colors = PREVIEW_PALETTE[project.styleRecipe.palette] ?? PREVIEW_PALETTE.vivid;
   const selected = (Object.keys(STYLE_OPTIONS) as (keyof StyleRecipe)[]).map((key) => STYLE_OPTIONS[key].find((option) => option.id === project.styleRecipe[key])?.label).filter(Boolean);
+  const isDefaultStyle = (Object.keys(DEFAULT_STYLE) as (keyof StyleRecipe)[]).every((key) => project.styleRecipe[key] === DEFAULT_STYLE[key]);
   function update(key: keyof StyleRecipe, value: string) {
     dispatch({ type: 'update', patch: { styleRecipe: { ...project.styleRecipe, [key]: value } } });
   }
+  function resetStyle() {
+    dispatch({ type: 'update', patch: { styleRecipe: { ...DEFAULT_STYLE } } });
+  }
   return <section className="style-section panel">
-    <div className="section-heading"><span>藝</span><div><h2>風格配方</h2><p>一個主風格＋四項可控修飾器</p></div></div>
+    <div className="style-header"><div className="section-heading"><span>藝</span><div><h2>風格配方</h2><p>一個主風格＋四項可控修飾器</p></div></div>
+      <button className="mini-button" type="button" disabled={isDefaultStyle} onClick={resetStyle}>重置配方</button></div>
     <div className="style-layout">
       <div className="style-preview" data-primary={project.styleRecipe.primary} data-outline={project.styleRecipe.outline} data-rendering={project.styleRecipe.rendering} data-shape={project.styleRecipe.shape}
         style={{ '--preview-a': colors[0], '--preview-b': colors[1], '--preview-c': colors[2] } as CSSProperties}>
