@@ -4,14 +4,11 @@ const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
 type Provider = 'chatgpt' | 'gemini';
 type ReferenceImage = { name?: string; type?: string; dataUrl?: string };
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-    },
-  });
+function sendJson(response: any, body: unknown, status = 200) {
+  response.status(status);
+  response.setHeader('content-type', 'application/json; charset=utf-8');
+  response.setHeader('cache-control', 'no-store');
+  response.json(body);
 }
 
 function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; type: string } {
@@ -124,25 +121,25 @@ async function generateGemini(prompt: string, references: ReferenceImage[]) {
   return { dataUrl: `data:${mime};base64,${payload.output_image.data}`, model };
 }
 
-export default async function handler(request: Request) {
-  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+export default async function handler(request: any, response: any) {
+  if (request.method !== 'POST') return sendJson(response, { error: 'Method not allowed' }, 405);
 
   try {
-    const body = await request.json() as { provider?: Provider; prompt?: string; references?: ReferenceImage[] };
+    const body = (typeof request.body === 'string' ? JSON.parse(request.body) : request.body || {}) as { provider?: Provider; prompt?: string; references?: ReferenceImage[] };
     const provider = body.provider;
     const prompt = String(body.prompt || '').trim();
     const references = Array.isArray(body.references) ? body.references.slice(0, MAX_REFERENCES) : [];
 
-    if (provider !== 'chatgpt' && provider !== 'gemini') return json({ error: '不支援的產圖平台' }, 400);
-    if (!prompt) return json({ error: '缺少產圖提示詞' }, 400);
-    if (body.references && body.references.length > MAX_REFERENCES) return json({ error: '參考照片最多 5 張' }, 400);
+    if (provider !== 'chatgpt' && provider !== 'gemini') return sendJson(response, { error: '不支援的產圖平台' }, 400);
+    if (!prompt) return sendJson(response, { error: '缺少產圖提示詞' }, 400);
+    if (body.references && body.references.length > MAX_REFERENCES) return sendJson(response, { error: '參考照片最多 5 張' }, 400);
 
     const result = provider === 'chatgpt'
       ? await generateOpenAI(prompt, references)
       : await generateGemini(prompt, references);
 
-    return json({ ...result, provider });
+    return sendJson(response, { ...result, provider });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'AI 產圖失敗' }, 500);
+    return sendJson(response, { error: error instanceof Error ? error.message : 'AI 產圖失敗' }, 500);
   }
 }
