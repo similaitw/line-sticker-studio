@@ -1,83 +1,147 @@
 # LINE Sticker Studio
 
-線上自動 LINE 貼圖製作工作台：在網站內完成角色／參考照片、常用語、風格與貼圖規格設定，直接呼叫 OpenAI 或 Gemini 圖片生成 API，自動產出候選貼圖表，再由瀏覽器完成切圖、繁體中文字後製、LINE 規格驗證與 ZIP 匯出。
+LINE Sticker Studio 是一個以 **ChatGPT Plus＋GitHub 橋接** 為核心的 LINE 貼圖工作台。
+
+網站負責角色設定、常用語、風格、候選格、切圖、繁體中文字後製、LINE 規格檢查與 ZIP 匯出；GitHub 負責傳遞產圖任務與狀態；ChatGPT 負責實際產圖。
 
 正式站：[https://linesticker-ten.vercel.app](https://linesticker-ten.vercel.app)
 
-## 產品目標
+## 主要流程
 
-主要流程不再是「下載 MD → 手動到 ChatGPT/Gemini 產圖 → 再匯回網站」，而是：
+1. 在 LINE Sticker Studio 設定角色、參考照片、貼圖張數、文字與風格。
+2. 按「建立 GitHub 產圖任務」。
+3. 網站開啟 GitHub Issue，新任務內含完整 manifest。
+4. 在這個已連接 GitHub 的 ChatGPT 對話輸入：
 
-1. 選角色或加入參考照片。
-2. 選擇貼圖類型、張數、風格與常用語。
-3. 在網站按「立即自動產生貼圖」。
-4. Vercel Serverless Function 以伺服器端 API Key 呼叫 OpenAI / Gemini。
-5. 回傳一張透明候選貼圖表。
-6. 網站自動切圖並在本機加入繁體中文字。
-7. 選取合法張數、完成合規檢查。
-8. 匯出可提交 LINE Creators Market 的 ZIP。
+   `處理最新 LINE 貼圖任務`
 
-原本的「完整產圖 MD」保留為備援模式，適合沒有 API Key、模型暫時不可用或想人工調整時使用。
+5. ChatGPT 直接讀取 GitHub 最新任務並產生候選貼圖圖。
+6. 有人物／寵物參考照片時，照片直接上傳到 ChatGPT 對話，不公開放到 GitHub。
+7. 將 ChatGPT 產出的 PNG 匯回 LINE Sticker Studio。
+8. 網站自動切割、套用繁體中文、選圖、驗證。
+9. 匯出 LINE ZIP。
 
-## 主要功能
+## 為什麼用 GitHub 當橋樑？
 
-- 網站內直接自動產圖，不需手動搬運圖片。
-- 支援 OpenAI Image API 與 Gemini Image API。
-- API Key 僅存在 Vercel 伺服器端，不使用 `VITE_*` 暴露到瀏覽器。
-- 最多 5 張人物、寵物或角色參考照片，本機 IndexedDB 保存。
-- 靜態、動態、自訂文字、訊息、大貼圖、彈出式與特效背景七種類型。
-- 角色題材、風格配方、台灣繁中常用語與自訂詞庫。
-- 候選網格自動切割，繁體中文字由網站本機後製，降低 AI 文字錯字。
-- 每張貼圖可人工入選／淘汰。
-- 動態貼圖 APNG 時間軸與 Web Worker 編碼。
-- 尺寸、透明度、檔案大小、影格、播放時間與素材權利檢查。
-- 專案 ZIP 備份與載入。
-- 手動 ChatGPT / Gemini Markdown 任務作為備援流程。
+這個架構不使用 Chat2Code，也不需要 OpenAI 圖片 API Key。
 
-## 自動產圖環境變數
+GitHub 負責：
 
-在 Vercel 專案的 Environment Variables 設定至少一組：
+- 任務佇列
+- Task ID
+- Manifest
+- 貼圖文字與動作
+- 角色／風格設定
+- 任務狀態
+- 歷史紀錄
 
-```env
-OPENAI_API_KEY=
-GEMINI_API_KEY=
+ChatGPT 則可以透過已連接的 GitHub 直接讀取與更新這些任務。
+
+## GitHub Job 格式
+
+每個 Job 會建立 GitHub Issue，包含：
+
+- `taskId`
+- `stickerType`
+- `targetCount`
+- `rows / columns`
+- character
+- style
+- captions
+- reference photo filenames
+- output spec
+- LINE_STICKER_TASK_MANIFEST
+
+例如：
+
+```text
+[LINE Sticker Job] 我的 LINE 貼圖 · c672b47b
+
+status: ready
+taskId: c672b47b-...
+3 × 3 candidates
+target: 8 stickers
 ```
 
-可選擇覆寫模型：
+## ChatGPT 呼叫方式
 
-```env
-OPENAI_IMAGE_MODEL=gpt-image-2.5-flare
-GEMINI_IMAGE_MODEL=gemini-3.1-flash-image
+在 ChatGPT 直接輸入：
+
+```text
+處理最新 LINE 貼圖任務
 ```
 
-> 不要把 API Key 寫成 `VITE_OPENAI_API_KEY` 或 `VITE_GEMINI_API_KEY`。Vite 的 `VITE_*` 變數會被打包到前端。
+或指定：
 
-## OpenAI 自動產圖
+```text
+處理 GitHub LINE Sticker Job #123
+```
 
-伺服器端使用 OpenAI Images API：
+ChatGPT 應：
 
-- 無參考照片：圖片生成。
-- 有參考照片：圖片編輯／參考圖生成。
-- 優先要求透明 PNG。
-- 預設以 1024×1024 產出候選貼圖表，再交給現有 Canvas 切圖流程。
+1. 從 `similaitw/line-sticker-studio` 讀取 Job。
+2. 解析 `LINE_STICKER_TASK_MANIFEST`。
+3. 檢查是否需要參考照片。
+4. 若需要照片，確認目前對話已有對應照片。
+5. 依 manifest 產生貼圖候選圖。
+6. 更新 GitHub Issue 狀態。
 
-## Gemini 自動產圖
+## 隱私原則
 
-伺服器端使用 Gemini Image API：
+目前 `similaitw/line-sticker-studio` 是 public repository，因此：
 
-- 支援文字生成圖片。
-- 可帶參考照片。
-- 產出 1:1、1K 圖片作為候選貼圖表。
-- 回傳後交給相同的本機切圖與字幕流程。
+- GitHub Job 可以存放文字規格與照片檔名。
+- **人物、家人、學生、寵物等實際照片不自動上傳 GitHub。**
+- 參考照片保留在瀏覽器 IndexedDB。
+- 真正產圖時，由使用者直接把照片上傳到 ChatGPT 對話。
 
-## 為什麼文字不交給 AI 畫？
+若未來建立 private Job repository，可再擴充成 GitHub 儲存參考素材。
 
-LINE 貼圖常使用繁體中文。為降低錯字、缺字與字型不一致：
+## 為什麼 AI 不直接畫中文字？
 
-- AI 只負責角色、表情與動作。
-- 提示詞明確要求不要畫任何文字。
-- 使用者選定的繁體中文由瀏覽器 Canvas 後製。
-- 字級、字型與位置仍可由網站控制。
+為降低繁體中文錯字與字體不一致：
+
+- AI 只畫角色、表情、動作。
+- AI 不畫文字。
+- 貼圖文字由 LINE Sticker Studio 在瀏覽器 Canvas 中後製。
+- 可統一控制字型、字級與位置。
+
+## 候選圖策略
+
+預設使用 3×3 候選網格：
+
+- 8 張 → 9 個候選
+- 16 張 → 建議 2 批，共 18 個候選
+- 24 張 → 建議 3 批，共 27 個候選
+- 32 張 → 建議 4 批，共 36 個候選
+- 40 張 → 建議 5 批，共 45 個候選
+
+這比一次要求 AI 畫 24～40 格更容易維持角色一致性與切割品質。
+
+## 常用語詞庫
+
+目標規格：
+
+- 每個分類 100 個常用語。
+- 同類型可用（1）（2）（3）分組。
+- 支援隨機抽取。
+- 同一批貼圖不重複。
+- 可混合多個分類。
+
+## 原有功能
+
+- 靜態、動態、自訂文字、訊息、大貼圖、彈出式、特效背景。
+- 最多 5 張參考照片。
+- 本機 IndexedDB 保存照片。
+- 角色題材與風格配方。
+- 台灣繁體中文詞庫。
+- 候選圖自動切割。
+- 每張貼圖人工入選／淘汰。
+- APNG 時間軸。
+- LINE 規格驗證。
+- 專案備份。
+- ZIP 匯出。
+- Markdown 手動產圖流程仍保留作備援。
 
 ## 本機開發
 
@@ -88,15 +152,7 @@ npm ci
 npm run dev
 ```
 
-前端預設：
-
-```text
-http://localhost:5173
-```
-
-本機若要測試 `/api/generate`，建議使用 Vercel CLI 執行完整前後端環境。
-
-## 驗證與建置
+## 驗證
 
 ```bash
 npm run typecheck
@@ -107,33 +163,28 @@ npm run test:e2e
 
 ## Vercel
 
-- Framework Preset：Vite
+- Framework：Vite
 - Build Command：`npm run build`
-- Output Directory：`dist`
+- Output：`dist`
 - Node.js：22
-- Serverless API：`api/generate.ts`
 
-GitHub `main` 為 Production Branch；其他 branch 與 PR 可建立 Preview Deployment。
+本架構不需要 OpenAI API Key 或 Gemini API Key。
 
-## 安全設計
+## 目前限制
 
-- API Key 不傳送到瀏覽器。
-- 圖片 API 回應不快取。
-- 參考照片最多 5 張。
-- 單張參考照片最大 20 MB。
-- 使用者必須確認照片／肖像與素材使用權。
-- 本專案不移除浮水印、不規避來源標記，也不保證 LINE 最終審核結果。
+GitHub 可以作為文字任務與狀態橋樑，但目前 ChatGPT 產出的圖片檔無法由此對話直接 commit 成 GitHub repository 的二進位圖片。
 
-## 後續最佳化方向
+因此現在的最後一步仍是：
 
-- 將一次生成整張候選表升級為「逐張併發生成＋角色一致性 reference」模式。
-- 失敗自動重試與單格重生。
-- 產圖成本預估與每日額度。
-- 伺服器端 rate limit。
-- 使用者登入與專案雲端保存。
-- 將每個貼圖分類擴充為 100 句常用語，支援隨機不重複抽取。
-- 產圖任務 queue 與進度狀態。
+```text
+ChatGPT 產圖
+→ 使用者下載 PNG
+→ LINE Sticker Studio 匯入 PNG
+→ 自動切圖／字幕／驗證／ZIP
+```
+
+若未來 ChatGPT／GitHub connector 開放直接寫入生成圖片，這一步可再自動化。
 
 ## License
 
-程式碼採 [MIT License](LICENSE)。此授權不包含使用者圖片、第三方素材、品牌、角色或 AI 生成內容的額外權利。
+MIT License。
