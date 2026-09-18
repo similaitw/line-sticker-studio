@@ -37,7 +37,6 @@ export default function App() {
   async function handleUpload(file:File){await run(async()=>{if(!/^image\/(png|jpeg|webp)$/.test(file.type))throw new Error('只支援 PNG、JPG 或 WebP');if(file.size>20*1024*1024)throw new Error('來源圖片不可超過 20 MB');await processSource(await readFileAsDataUrl(file),true);});}
   async function handleSlice(){if(project.sourceDataUrl)await run(()=>processSource(project.sourceDataUrl,false));}
   async function handleSample(){await run(async()=>processSource(createSampleSheet(project.settings.rows,project.settings.columns),false));}
-  useState(() => { const handler = (event: Event) => { const dataUrl = (event as CustomEvent<string>).detail; if (dataUrl) void processSource(dataUrl, true); }; window.addEventListener('line-sticker-generated', handler); return () => window.removeEventListener('line-sticker-generated', handler); });
   async function handleExport(){setExporting(true);setError('');try{const errors=validateProject(project).filter((item)=>item.level==='error');if(errors.length)throw new Error(`尚有 ${errors.length} 項阻擋問題：${errors[0].message}`);for(const photo of project.referencePhotos)if(!await getReferencePhoto(photo.id))throw new Error(`找不到參考照片：${photo.name}`);downloadBlob(await buildStickerZip(project),`${project.type}-line-stickers.zip`);}catch(reason){setError(reason instanceof Error?reason.message:'匯出失敗');}finally{setExporting(false);}}
   const issues=validateProject(project); const errors=issues.filter((item)=>item.level==='error').length; const included=project.stickers.filter((asset)=>asset.included).length;
   const navGroups:NavGroup[]=[
@@ -51,15 +50,11 @@ export default function App() {
   return <div className="app-shell app-layout"><Header onExport={()=>void handleExport()} exporting={exporting} activeView={activeView} navGroups={navGroups} onSelect={(id)=>setActiveView(id as ViewId)}/>
     <main className="content-shell"><div className="view-header"><span>LINE Sticker Studio</span><h1>{viewTitle}</h1></div>
       {error&&<div className="error-banner" role="alert"><strong>處理失敗</strong><span>{error}</span><button onClick={()=>setError('')}>×</button></div>}
-      <ActiveView id={activeView} onNavigate={(id)=>setActiveView(id as ViewId)} onUpload={(file)=>void handleUpload(file)} onSlice={()=>void handleSlice()} onSample={()=>void handleSample()} onExport={()=>void handleExport()} busy={busy} exporting={exporting} />
+      <ActiveView id={activeView} onNavigate={(id)=>setActiveView(id as ViewId)} onGenerated={(dataUrl)=>processSource(dataUrl,true)} onUpload={(file)=>void handleUpload(file)} onSlice={()=>void handleSlice()} onSample={()=>void handleSample()} onExport={()=>void handleExport()} busy={busy} exporting={exporting} />
     </main></div>;
 }
 
-function ActiveView({ id, onNavigate, onUpload, onSlice, onSample, onExport, busy, exporting }: { id: ViewId; onNavigate: (id: string) => void; onUpload: (file: File) => void; onSlice: () => void; onSample: () => void; onExport: () => void; busy: boolean; exporting: boolean }) {
-  const processGenerated = async (dataUrl: string) => {
-    const event = new CustomEvent('line-sticker-generated', { detail: dataUrl });
-    window.dispatchEvent(event);
-  };
+function ActiveView({ id, onNavigate, onGenerated, onUpload, onSlice, onSample, onExport, busy, exporting }: { id: ViewId; onNavigate: (id: string) => void; onGenerated: (dataUrl: string) => Promise<void>; onUpload: (file: File) => void; onSlice: () => void; onSample: () => void; onExport: () => void; busy: boolean; exporting: boolean }) {
   const { project } = useProject();
   if (id === 'tutorial-basic') return <TutorialPanel mode="beginner" onNavigate={onNavigate} />;
   if (id === 'tutorial-animated') return <TutorialPanel mode="animated" onNavigate={onNavigate} />;
@@ -68,7 +63,7 @@ function ActiveView({ id, onNavigate, onUpload, onSlice, onSample, onExport, bus
   if (id === 'photos') return <ReferencePhotoPanel />;
   if (id === 'phrases') return <PhraseSelector />;
   if (id === 'style') return <StyleSelector />;
-  if (id === 'generate') return <GeneratePanel onGenerated={async (dataUrl) => { await processGenerated(dataUrl); onNavigate('results'); }} />;
+  if (id === 'generate') return <GeneratePanel onGenerated={async (dataUrl) => { await onGenerated(dataUrl); onNavigate('results'); }} />;
   if (id === 'tasks') return <TaskPanel />;
   if (id === 'settings') return <div className="single-panel"><SettingsPanel /></div>;
   if (id === 'source') return <SourceStage onUpload={onUpload} onSlice={onSlice} onSample={onSample} busy={busy} />;
