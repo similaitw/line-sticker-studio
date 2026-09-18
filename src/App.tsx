@@ -75,7 +75,7 @@ function ActiveView({ id, onNavigate, onUpload, onSlice, onSample, onExport, bus
   if (id === 'tutorial-animated') return <TutorialPanel mode="animated" onNavigate={onNavigate} />;
   if (id === 'provider') return <ProviderPanel />;
   if (id === 'type') return <TypeSelector />;
-  if (id === 'phrases') return <PhraseSelector />;
+  if (id === 'phrases') return <div className="simple-step"><div className="simple-step-intro"><b>2</b><div><h2>選貼圖文字</h2><p>直接套常用組合最快；想自己挑再搜尋。系統會避免同一組出現重複用語。</p></div></div><PhraseSelector /><button className="primary-button simple-next" onClick={()=>onNavigate('make')}>下一步：建立產圖任務 →</button></div>;
   if (id === 'style') return <StyleSelector />;
   if (id === 'tasks') return <TaskPanel />;
   if (id === 'settings') return <div className="single-panel"><SettingsPanel /></div>;
