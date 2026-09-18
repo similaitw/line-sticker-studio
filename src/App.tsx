@@ -22,10 +22,10 @@ import { buildStickerZip, downloadBlob } from './export/exportZip';
 import { getReferencePhoto } from './storage/referencePhotos';
 import { useProject } from './state/ProjectContext';
 
-type ViewId = 'provider' | 'type' | 'photos' | 'phrases' | 'style' | 'bridge' | 'tasks' | 'settings' | 'source' | 'results' | 'timeline' | 'validation' | 'export' | 'tutorial-basic' | 'tutorial-animated';
+type ViewId = 'character' | 'phrases' | 'make' | 'finish' | 'provider' | 'type' | 'style' | 'tasks' | 'settings' | 'source' | 'results' | 'timeline' | 'validation' | 'tutorial-basic' | 'tutorial-animated';
 
 export default function App() {
-  const { project, dispatch } = useProject(); const [busy,setBusy]=useState(false); const [exporting,setExporting]=useState(false); const [error,setError]=useState(''); const [activeView,setActiveView]=useState<ViewId>('provider');
+  const { project, dispatch } = useProject(); const [busy,setBusy]=useState(false); const [exporting,setExporting]=useState(false); const [error,setError]=useState(''); const [activeView,setActiveView]=useState<ViewId>('character');
   const processSource = useCallback(async (dataUrl:string, fromProvider=true) => {
     const spec=getSpec(project.type); const mark=fromProvider?await detectProvenanceMark(dataUrl,project.generationProvider):'none';
     const cellCount=project.settings.rows*project.settings.columns; const stickers=await sliceSheet(dataUrl,{count:cellCount,targetCount:project.settings.count,rows:project.settings.rows,columns:project.settings.columns,padding:project.settings.padding,outputWidth:spec.width,outputHeight:spec.height,
@@ -40,11 +40,23 @@ export default function App() {
   async function handleExport(){setExporting(true);setError('');try{const errors=validateProject(project).filter((item)=>item.level==='error');if(errors.length)throw new Error(`尚有 ${errors.length} 項阻擋問題：${errors[0].message}`);for(const photo of project.referencePhotos)if(!await getReferencePhoto(photo.id))throw new Error(`找不到參考照片：${photo.name}`);downloadBlob(await buildStickerZip(project),`${project.type}-line-stickers.zip`);}catch(reason){setError(reason instanceof Error?reason.message:'匯出失敗');}finally{setExporting(false);}}
   const issues=validateProject(project); const errors=issues.filter((item)=>item.level==='error').length; const included=project.stickers.filter((asset)=>asset.included).length;
   const navGroups:NavGroup[]=[
-    {label:'教學',items:[{id:'tutorial-basic',label:'新手流程',summary:'任務清單'},{id:'tutorial-animated',label:'動態貼圖',summary:getSpec(project.type).animated?'APNG 教學':'需切換動態'}]},
-    {label:'準備',items:[{id:'provider',label:'生成平台',summary:project.generationProvider==='chatgpt'?'ChatGPT':'Gemini'},{id:'type',label:'貼圖類型',summary:getSpec(project.type).label},{id:'photos',label:'參考照片',summary:`${project.referencePhotos.length}/5 張`}]},
-    {label:'配方',items:[{id:'settings',label:'設計設定',summary:`${project.settings.rows}×${project.settings.columns} · ${project.settings.count} 張`},{id:'phrases',label:'常用文字詞庫',summary:`${project.captionSlots.length}/${project.settings.rows*project.settings.columns} 格`},{id:'style',label:'風格配方',summary:'即時預覽'},{id:'bridge',label:'GitHub 產圖橋接',summary:'直接交給 ChatGPT'},{id:'tasks',label:'手動產圖備援',summary:`${project.generationTasks.length} 份 MD`}]},
-    {label:'工作台',items:[{id:'source',label:'貼圖表預覽',summary:project.sourceDataUrl?`已切割 ${project.stickers.length} 張`:'等待圖檔'},{id:'results',label:'切割結果',summary:`入選 ${included}/${project.settings.count}`}]},
-    {label:'檢查輸出',items:[{id:'timeline',label:'動畫時間軸',summary:getSpec(project.type).animated?'APNG 設定':'靜態貼圖'},{id:'validation',label:'合規檢查',summary:errors?`${errors} 個阻擋`:'可檢查'},{id:'export',label:'匯出 ZIP',summary:project.stickers.length?'準備匯出':'尚無貼圖'}]},
+    {label:'開始製作',items:[
+      {id:'character',label:'① 角色',summary:project.referencePhotos.length?`已加入 ${project.referencePhotos.length} 張照片`:'選角色或加照片'},
+      {id:'phrases',label:'② 文字',summary:`${project.captionSlots.length}/${project.settings.rows*project.settings.columns} 個`},
+      {id:'make',label:'③ 產圖',summary:project.sourceDataUrl?'圖片已匯入':'GitHub → ChatGPT'},
+      {id:'finish',label:'④ 完成',summary:project.stickers.length?`已選 ${included}/${project.settings.count}`:'等待產圖'},
+    ]},
+    {label:'進階設定',items:[
+      {id:'type',label:'貼圖類型',summary:getSpec(project.type).label},
+      {id:'settings',label:'角色／張數細節',summary:`${project.settings.rows}×${project.settings.columns} · ${project.settings.count} 張`},
+      {id:'style',label:'畫風與配色',summary:'風格配方'},
+      {id:'source',label:'切圖微調',summary:project.sourceDataUrl?`${project.stickers.length} 張`:'尚無圖片'},
+      {id:'timeline',label:'動畫設定',summary:getSpec(project.type).animated?'APNG':'靜態免設定'},
+      {id:'validation',label:'詳細檢查',summary:errors?`${errors} 個問題`:'正常'},
+      {id:'tasks',label:'手動 MD 備援',summary:'必要時使用'},
+      {id:'provider',label:'其他產圖方式',summary:project.generationProvider==='chatgpt'?'ChatGPT':'Gemini'},
+      {id:'tutorial-basic',label:'使用說明',summary:'教學'},
+    ]},
   ];
   const viewTitle=navGroups.flatMap((group)=>group.items).find((item)=>item.id===activeView)?.label ?? '工作區';
   return <div className="app-shell app-layout"><Header onExport={()=>void handleExport()} exporting={exporting} activeView={activeView} navGroups={navGroups} onSelect={(id)=>setActiveView(id as ViewId)}/>
@@ -56,14 +68,15 @@ export default function App() {
 
 function ActiveView({ id, onNavigate, onUpload, onSlice, onSample, onExport, busy, exporting }: { id: ViewId; onNavigate: (id: string) => void; onUpload: (file: File) => void; onSlice: () => void; onSample: () => void; onExport: () => void; busy: boolean; exporting: boolean }) {
   const { project } = useProject();
+  if (id === 'character') return <div className="simple-step"><div className="simple-step-intro"><b>1</b><div><h2>先決定角色</h2><p>有照片就上傳；沒有照片也可以直接選角色。其他設定先用預設值即可。</p></div></div><div className="simple-stack"><ReferencePhotoPanel /><div className="single-panel"><SettingsPanel /></div></div><button className="primary-button simple-next" onClick={()=>onNavigate('phrases')}>下一步：選貼圖文字 →</button></div>;
+  if (id === 'make') return <div className="simple-step"><div className="simple-step-intro"><b>3</b><div><h2>交給 ChatGPT 產圖</h2><p>先建立 GitHub 任務；回到這個對話叫我處理。產圖完成後，把 PNG 拖回下方即可。</p></div></div><GitHubBridgePanel /><div className="simple-divider"><span>產圖完成後</span></div><SourceStage onUpload={onUpload} onSlice={onSlice} onSample={onSample} busy={busy} /></div>;
+  if (id === 'finish') return <div className="simple-step"><div className="simple-step-intro"><b>4</b><div><h2>確認後直接下載</h2><p>挑滿需要的貼圖；有問題才看詳細檢查。</p></div></div><StickerResults /><div className="simple-finish-actions"><button className="primary-button wide" disabled={exporting || !project.stickers.length} onClick={onExport}>{exporting?'匯出中…':'下載 LINE 貼圖 ZIP'}</button><button className="ghost-button" onClick={()=>onNavigate('validation')}>查看詳細檢查</button></div></div>;
   if (id === 'tutorial-basic') return <TutorialPanel mode="beginner" onNavigate={onNavigate} />;
   if (id === 'tutorial-animated') return <TutorialPanel mode="animated" onNavigate={onNavigate} />;
   if (id === 'provider') return <ProviderPanel />;
   if (id === 'type') return <TypeSelector />;
-  if (id === 'photos') return <ReferencePhotoPanel />;
   if (id === 'phrases') return <PhraseSelector />;
   if (id === 'style') return <StyleSelector />;
-  if (id === 'bridge') return <GitHubBridgePanel />;
   if (id === 'tasks') return <TaskPanel />;
   if (id === 'settings') return <div className="single-panel"><SettingsPanel /></div>;
   if (id === 'source') return <SourceStage onUpload={onUpload} onSlice={onSlice} onSample={onSample} busy={busy} />;
