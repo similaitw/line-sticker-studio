@@ -3,7 +3,7 @@ import { readFileAsDataUrl } from './canvas/image';
 import { detectProvenanceMark, simpleHash } from './canvas/provenance';
 import { sliceSheet } from './canvas/slice';
 import { Header, type NavGroup } from './components/Header';
-import { GeneratePanel } from './components/GeneratePanel';
+import { GitHubBridgePanel } from './components/GitHubBridgePanel';
 import { PhraseSelector } from './components/PhraseSelector';
 import { ProviderPanel } from './components/ProviderPanel';
 import { ReferencePhotoPanel } from './components/ReferencePhotoPanel';
@@ -22,7 +22,7 @@ import { buildStickerZip, downloadBlob } from './export/exportZip';
 import { getReferencePhoto } from './storage/referencePhotos';
 import { useProject } from './state/ProjectContext';
 
-type ViewId = 'provider' | 'type' | 'photos' | 'phrases' | 'style' | 'generate' | 'tasks' | 'settings' | 'source' | 'results' | 'timeline' | 'validation' | 'export' | 'tutorial-basic' | 'tutorial-animated';
+type ViewId = 'provider' | 'type' | 'photos' | 'phrases' | 'style' | 'bridge' | 'tasks' | 'settings' | 'source' | 'results' | 'timeline' | 'validation' | 'export' | 'tutorial-basic' | 'tutorial-animated';
 
 export default function App() {
   const { project, dispatch } = useProject(); const [busy,setBusy]=useState(false); const [exporting,setExporting]=useState(false); const [error,setError]=useState(''); const [activeView,setActiveView]=useState<ViewId>('provider');
@@ -42,7 +42,7 @@ export default function App() {
   const navGroups:NavGroup[]=[
     {label:'教學',items:[{id:'tutorial-basic',label:'新手流程',summary:'任務清單'},{id:'tutorial-animated',label:'動態貼圖',summary:getSpec(project.type).animated?'APNG 教學':'需切換動態'}]},
     {label:'準備',items:[{id:'provider',label:'生成平台',summary:project.generationProvider==='chatgpt'?'ChatGPT':'Gemini'},{id:'type',label:'貼圖類型',summary:getSpec(project.type).label},{id:'photos',label:'參考照片',summary:`${project.referencePhotos.length}/5 張`}]},
-    {label:'配方',items:[{id:'settings',label:'設計設定',summary:`${project.settings.rows}×${project.settings.columns} · ${project.settings.count} 張`},{id:'phrases',label:'常用文字詞庫',summary:`${project.captionSlots.length}/${project.settings.rows*project.settings.columns} 格`},{id:'style',label:'風格配方',summary:'即時預覽'},{id:'generate',label:'AI 自動產圖',summary:'網站內直接產生'},{id:'tasks',label:'手動產圖備援',summary:`${project.generationTasks.length} 份 MD`}]},
+    {label:'配方',items:[{id:'settings',label:'設計設定',summary:`${project.settings.rows}×${project.settings.columns} · ${project.settings.count} 張`},{id:'phrases',label:'常用文字詞庫',summary:`${project.captionSlots.length}/${project.settings.rows*project.settings.columns} 格`},{id:'style',label:'風格配方',summary:'即時預覽'},{id:'bridge',label:'GitHub 產圖橋接',summary:'直接交給 ChatGPT'},{id:'tasks',label:'手動產圖備援',summary:`${project.generationTasks.length} 份 MD`}]},
     {label:'工作台',items:[{id:'source',label:'貼圖表預覽',summary:project.sourceDataUrl?`已切割 ${project.stickers.length} 張`:'等待圖檔'},{id:'results',label:'切割結果',summary:`入選 ${included}/${project.settings.count}`}]},
     {label:'檢查輸出',items:[{id:'timeline',label:'動畫時間軸',summary:getSpec(project.type).animated?'APNG 設定':'靜態貼圖'},{id:'validation',label:'合規檢查',summary:errors?`${errors} 個阻擋`:'可檢查'},{id:'export',label:'匯出 ZIP',summary:project.stickers.length?'準備匯出':'尚無貼圖'}]},
   ];
@@ -50,11 +50,11 @@ export default function App() {
   return <div className="app-shell app-layout"><Header onExport={()=>void handleExport()} exporting={exporting} activeView={activeView} navGroups={navGroups} onSelect={(id)=>setActiveView(id as ViewId)}/>
     <main className="content-shell"><div className="view-header"><span>LINE Sticker Studio</span><h1>{viewTitle}</h1></div>
       {error&&<div className="error-banner" role="alert"><strong>處理失敗</strong><span>{error}</span><button onClick={()=>setError('')}>×</button></div>}
-      <ActiveView id={activeView} onNavigate={(id)=>setActiveView(id as ViewId)} onGenerated={(dataUrl)=>processSource(dataUrl,true)} onUpload={(file)=>void handleUpload(file)} onSlice={()=>void handleSlice()} onSample={()=>void handleSample()} onExport={()=>void handleExport()} busy={busy} exporting={exporting} />
+      <ActiveView id={activeView} onNavigate={(id)=>setActiveView(id as ViewId)} onUpload={(file)=>void handleUpload(file)} onSlice={()=>void handleSlice()} onSample={()=>void handleSample()} onExport={()=>void handleExport()} busy={busy} exporting={exporting} />
     </main></div>;
 }
 
-function ActiveView({ id, onNavigate, onGenerated, onUpload, onSlice, onSample, onExport, busy, exporting }: { id: ViewId; onNavigate: (id: string) => void; onGenerated: (dataUrl: string) => Promise<void>; onUpload: (file: File) => void; onSlice: () => void; onSample: () => void; onExport: () => void; busy: boolean; exporting: boolean }) {
+function ActiveView({ id, onNavigate, onUpload, onSlice, onSample, onExport, busy, exporting }: { id: ViewId; onNavigate: (id: string) => void; onUpload: (file: File) => void; onSlice: () => void; onSample: () => void; onExport: () => void; busy: boolean; exporting: boolean }) {
   const { project } = useProject();
   if (id === 'tutorial-basic') return <TutorialPanel mode="beginner" onNavigate={onNavigate} />;
   if (id === 'tutorial-animated') return <TutorialPanel mode="animated" onNavigate={onNavigate} />;
@@ -63,7 +63,7 @@ function ActiveView({ id, onNavigate, onGenerated, onUpload, onSlice, onSample, 
   if (id === 'photos') return <ReferencePhotoPanel />;
   if (id === 'phrases') return <PhraseSelector />;
   if (id === 'style') return <StyleSelector />;
-  if (id === 'generate') return <GeneratePanel onGenerated={async (dataUrl) => { await onGenerated(dataUrl); onNavigate('results'); }} />;
+  if (id === 'bridge') return <GitHubBridgePanel />;
   if (id === 'tasks') return <TaskPanel />;
   if (id === 'settings') return <div className="single-panel"><SettingsPanel /></div>;
   if (id === 'source') return <SourceStage onUpload={onUpload} onSlice={onSlice} onSample={onSample} busy={busy} />;
