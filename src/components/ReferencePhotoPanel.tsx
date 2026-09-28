@@ -22,7 +22,7 @@ export function ReferencePhotoPanel() {
   async function remove(id: string) { await removeReferencePhoto(id); const next = project.referencePhotos.filter((item) => item.id !== id).map((item, order) => ({ ...item, order }));
     if (next.length && !next.some((item) => item.primary)) next[0] = { ...next[0], primary: true };
     dispatch({ type: 'update', patch: { referencePhotos: next, photoRightsConfirmed: next.length ? project.photoRightsConfirmed : false } }); }
-  return <section className="photo-section panel"><div className="section-heading"><span>照</span><div><h2>個人參考照片</h2><p>最多 5 張，與完整 MD 同次上傳平台</p></div></div>
+  return <section className="photo-section panel"><div className="section-heading"><span>照</span><div><h2>個人參考照片</h2><p>最多 5 張；照片留在本機，產圖時再直接上傳到 ChatGPT</p></div></div>
     <div className="photo-actions"><button className="primary-button" disabled={project.referencePhotos.length >= 5} onClick={() => inputRef.current?.click()}>加入參考照片</button>
       <input ref={inputRef} hidden multiple type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { if (event.target.files) void add(event.target.files); event.target.value = ''; }} />
       <span>{project.referencePhotos.length} / 5</span></div>
