@@ -33,6 +33,6 @@ export function ReferencePhotoPanel() {
       <label><input type="radio" name="primary-photo" checked={photo.primary} onChange={() => dispatch({ type: 'update', patch: { referencePhotos: project.referencePhotos.map((item) => ({ ...item, primary: item.id === photo.id })) } })} />主照片</label>
       <div className="photo-buttons"><button disabled={index === 0} onClick={() => reorder(index, -1)}>←</button><button disabled={index === project.referencePhotos.length - 1} onClick={() => reorder(index, 1)}>→</button><button onClick={() => void remove(photo.id)}>×</button></div>
     </article>)}</div>
-    {project.referencePhotos.length > 0 && <label className="rights-check"><input type="checkbox" checked={project.photoRightsConfirmed} onChange={(event) => dispatch({ type: 'update', patch: { photoRightsConfirmed: event.target.checked } })} />我確認擁有照片使用權及必要肖像同意，並同意上傳至所選 AI 平台。</label>}
+    {project.referencePhotos.length > 0 && <label className="rights-check"><input type="checkbox" checked={project.photoRightsConfirmed} onChange={(event) => dispatch({ type: 'update', patch: { photoRightsConfirmed: event.target.checked } })} />我確認有權使用這些照片，並同意在 ChatGPT 產圖時使用。</label>}
   </section>;
 }
