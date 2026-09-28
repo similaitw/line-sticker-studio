@@ -3,6 +3,7 @@ import { readFileAsDataUrl } from './canvas/image';
 import { detectProvenanceMark, simpleHash } from './canvas/provenance';
 import { sliceSheet } from './canvas/slice';
 import { Header, type NavGroup } from './components/Header';
+import { CharacterStep } from './components/CharacterStep';
 import { GitHubBridgePanel } from './components/GitHubBridgePanel';
 import { PhraseSelector } from './components/PhraseSelector';
 import { ProviderPanel } from './components/ProviderPanel';
@@ -68,7 +69,7 @@ export default function App() {
 
 function ActiveView({ id, onNavigate, onUpload, onSlice, onSample, onExport, busy, exporting }: { id: ViewId; onNavigate: (id: string) => void; onUpload: (file: File) => void; onSlice: () => void; onSample: () => void; onExport: () => void; busy: boolean; exporting: boolean }) {
   const { project } = useProject();
-  if (id === 'character') return <div className="simple-step"><div className="simple-step-intro"><b>1</b><div><h2>先決定角色</h2><p>有照片就上傳；沒有照片也可以直接選角色。其他設定先用預設值即可。</p></div></div><div className="simple-stack"><ReferencePhotoPanel /><div className="single-panel"><SettingsPanel /></div></div><button className="primary-button simple-next" onClick={()=>onNavigate('phrases')}>下一步：選貼圖文字 →</button></div>;
+  if (id === 'character') return <CharacterStep onNext={()=>onNavigate('phrases')} />;
   if (id === 'make') return <div className="simple-step"><div className="simple-step-intro"><b>3</b><div><h2>交給 ChatGPT 產圖</h2><p>先建立 GitHub 任務；回到這個對話叫我處理。產圖完成後，把 PNG 拖回下方即可。</p></div></div><GitHubBridgePanel /><div className="simple-divider"><span>產圖完成後</span></div><SourceStage onUpload={onUpload} onSlice={onSlice} onSample={onSample} busy={busy} /></div>;
   if (id === 'finish') return <div className="simple-step"><div className="simple-step-intro"><b>4</b><div><h2>確認後直接下載</h2><p>挑滿需要的貼圖；有問題才看詳細檢查。</p></div></div><StickerResults /><div className="simple-finish-actions"><button className="primary-button wide" disabled={exporting || !project.stickers.length} onClick={onExport}>{exporting?'匯出中…':'下載 LINE 貼圖 ZIP'}</button><button className="ghost-button" onClick={()=>onNavigate('validation')}>查看詳細檢查</button></div></div>;
   if (id === 'tutorial-basic') return <TutorialPanel mode="beginner" onNavigate={onNavigate} />;
