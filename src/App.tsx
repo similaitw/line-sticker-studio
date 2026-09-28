@@ -7,7 +7,6 @@ import { CharacterStep } from './components/CharacterStep';
 import { GitHubBridgePanel } from './components/GitHubBridgePanel';
 import { PhraseSelector } from './components/PhraseSelector';
 import { ProviderPanel } from './components/ProviderPanel';
-import { ReferencePhotoPanel } from './components/ReferencePhotoPanel';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SourceStage } from './components/SourceStage';
 import { StickerResults } from './components/StickerResults';
