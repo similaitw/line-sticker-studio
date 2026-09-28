@@ -45,10 +45,10 @@ export function CharacterStep({ onNext }: { onNext: () => void }) {
     </div>}
 
     {mode && <div className="simple-bottom-actions">
-      <button className="primary-button simple-next" disabled={mode === 'photo' && project.referencePhotos.length === 0} onClick={onNext}>
+      <button className="primary-button simple-next" disabled={mode === 'photo' && (project.referencePhotos.length === 0 || !project.photoRightsConfirmed)} onClick={onNext}>
         下一步：選貼圖文字 →
       </button>
-      {mode === 'photo' && project.referencePhotos.length === 0 && <span>先加入至少 1 張照片</span>}
+      {mode === 'photo' && project.referencePhotos.length === 0 && <span>先加入至少 1 張照片</span>}{mode === 'photo' && project.referencePhotos.length > 0 && !project.photoRightsConfirmed && <span>請先確認照片使用權</span>}
     </div>}
   </div>;
 }
